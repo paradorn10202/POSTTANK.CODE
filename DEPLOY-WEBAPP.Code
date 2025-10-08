@@ -1,0 +1,16 @@
+// This function serves the HTML file for the web app
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('Index')
+    .setSandboxMode(HtmlService.SandboxMode.IFRAME)
+    .setTitle("POST-TANK")
+    .setFaviconUrl('https://www.example.com/favicon.ico');
+}
+
+// This function can process data submitted via the form in the HTML interface
+function processFormData(formData) {
+  // Example: Save the form data to a Google Sheet
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Responses');
+  sheet.appendRow([new Date(), formData.name, formData.email]);
+
+  return "Form submitted successfully!";
+}
