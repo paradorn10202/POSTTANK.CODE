@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>POST TANK</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&display=swap');
+    body {
+      font-family: 'Kanit', sans-serif;
+      background: linear-gradient(-45deg, #1cb5e0, #000851, #2ebf91, #8360c3);
+      background-size: 400% 400%;
+      animation: gradientBG 12s ease infinite;
+      display: flex; justify-content: center; align-items: center;
+      min-height: 100vh; margin: 0;
+    }
+    @keyframes gradientBG { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+    .container {
+      background: rgba(255,255,255,0.15); backdrop-filter: blur(15px);
+      border-radius: 25px; box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+      padding: 50px 40px; text-align: center; width: 90%; max-width: 450px;
+      animation: fadeIn 1s ease-in-out;
+    }
+    @keyframes fadeIn { from{opacity:0; transform:translateY(20px)} to{opacity:1; transform:translateY(0)} }
+    h1 { font-size: 46px; margin-bottom: 25px; color: #fff; text-shadow: 2px 2px 6px rgba(0,0,0,0.4); letter-spacing: 2px; }
+    label { font-size: 20px; color: #fff; font-weight: 600; display: block; margin: 15px 0 8px; text-align: left; }
+    input, select {
+      width: 100%; font-size: 20px; padding: 14px; margin-bottom: 20px;
+      border-radius: 14px; border: none; outline: none; background: rgba(255,255,255,0.85); color: #333;
+      box-shadow: inset 3px 3px 8px rgba(0,0,0,0.25), inset -3px -3px 8px rgba(255,255,255,0.7);
+      transition: 0.3s; box-sizing: border-box; display: block;
+    }
+    input:focus, select:focus { transform: scale(1.02); box-shadow: 0 0 12px rgba(255,255,255,0.8); }
+    button {
+      font-size: 22px; padding: 14px 36px; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; color: white;
+      background: linear-gradient(45deg, #1cb5e0, #000851); box-shadow: 0 6px 16px rgba(0,0,0,0.3); transition: all 0.4s ease;
+    }
+    button:hover { transform: translateY(-4px) scale(1.05); background: linear-gradient(45deg, #2ebf91, #1cb5e0); box-shadow: 0 12px 28px rgba(0,0,0,0.4); }
+    h2 { margin-top: 30px; font-size: 26px; color: #fff; text-shadow: 1px 1px 4px rgba(0,0,0,0.4); }
+    #result {
+      font-size: 40px; font-weight: bold; margin-top: 15px; padding: 15px 20px; border-radius: 18px;
+      background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); display: inline-block; min-width: 150px;
+      color: #fff; box-shadow: inset 0 0 12px rgba(255,255,255,0.6), 0 8px 20px rgba(0,0,0,0.3);
+    }
+    .muted { font-size: 14px; color: #eee; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>POST-TANK</h1>
+
+    <!-- ใช้ form เพื่อส่งค่าให้ง่าย และ name ตรงกับ Apps Script -->
+    <form id="posttank" name="posttank">
+      <label for="inputA">ระดับขาดเกินจากแป้น:</label>
+      <input type="number" id="inputA" name="ขนาดเกิน" placeholder="เช่น 5 หรือ -3" required>
+
+      <label for="dropdown">ขนาดความจุ</label>
+      <select id="dropdown" name="ขนาดความจุ" required>
+        <option value="">เลือกขนาดความจุ</option>
+        <option value="3000">3000 ลิตร</option>
+        <option value="4000">4000 ลิตร</option>
+        <option value="5000">5000 ลิตร</option>
+        <option value="6000">6000 ลิตร</option>
+        <option value="7000">7000 ลิตร</option>
+        <option value="8000">8000 ลิตร</option>
+        <option value="9000">9000 ลิตร</option>
+        <option value="10000">10000 ลิตร</option>
+        <option value="12000">12000 ลิตร</option>
+      </select>
+
+      <!-- hidden เพื่อส่งผลลัพธ์เข้าชีต -->
+      <input type="hidden" id="resultHidden" name="ผลลัพธ์">
+
+      <button type="button" onclick="processValues()">🔘 แปรค่า</button>
+
+      <h2>ผลลัพธ์</h2>
+      <p id="result">---</p>
+
+      <button type="submit" style="margin-top:16px;">_บันทึกข้อมูลแปรค่า_</button>
+      <p class="muted">บันทึกข้อมูลลง Google Sheet หลังจากคำนวณเสร็จ</p>
+    </form>
+  </div>
+
+<script>
+  const form = document.getElementById('posttank');
+  const inputA = document.getElementById('inputA');
+  const dropdown = document.getElementById('dropdown');
+  const resultEl = document.getElementById('result');
+  const resultHidden = document.getElementById('resultHidden');
+  const scriptURL = 'https://script.google.com/macros/s/AKfycbwMpEbw-z6ZwSYR-hx6BU5yGJRluHsHboYBBBlo1LtiDKdR_9Rww-nK5qlwiRPyEqpJ/exec';
+
+  // ✅ ตาราง lookup ครอบคลุมทุกความจุ
+  const tables = {
+    3000: {
+      1:"1.84",2:"3.66",3:"5.48",4:"7.29",5:"9.10",6:"10.90",7:"12.69",8:"14.47",9:"16.25",10:"18.02",
+      "-1":"-1.85","-2":"-3.70","-3":"-5.57","-4":"-7.45","-5":"-9.33","-6":"-11.22","-7":"-13.13","-8":"-15.04","-9":"-16.96","-10":"-18.89"
+    },
+    4000: {
+      1:"2.30",2:"4.60",3:"6.90",4:"9.00",5:"11.20",6:"13.30",7:"15.40",8:"17.40",9:"19.40",10:"21.30",
+      "-1":"-2.60","-2":"-5.10","-3":"-7.70","-4":"-10.20","-5":"-12.80","-6":"-15.40","-7":"-17.90","-8":"-20.50","-9":"-23.00","-10":"-25.60"
+    },
+    5000: {
+      1:"2.90",2:"5.80",3:"8.60",4:"11.30",5:"14.00",6:"16.60",7:"19.20",8:"21.70",9:"24.20",10:"26.60",
+      "-1":"-3.20","-2":"-6.40","-3":"-9.60","-4":"-12.80","-5":"-16.00","-6":"-19.20","-7":"-22.40","-8":"-25.60","-9":"-28.80","-10":"-32.00"
+    },
+    6000: {
+      1:"3.50",2:"6.90",3:"10.30",4:"13.60",5:"16.80",6:"20.00",7:"23.10",8:"26.10",9:"29.10",10:"32.00",
+      "-1":"-3.80","-2":"-7.70","-3":"-11.50","-4":"-15.40","-5":"-19.20","-6":"-23.00","-7":"-26.90","-8":"-30.70","-9":"-34.60","-10":"-38.40"
+    },
+    7000: {
+      1:"4.10",2:"8.10",3:"12.00",4:"15.80",5:"19.60",6:"23.30",7:"26.90",8:"30.40",9:"33.90",10:"37.30",
+      "-1":"-4.50","-2":"-9.00","-3":"-13.40","-4":"-17.90","-5":"-22.40","-6":"-26.90","-7":"-31.40","-8":"-35.80","-9":"-40.30","-10":"-44.80"
+    },
+    8000: {
+      1:"4.70",2:"9.20",3:"13.70",4:"18.10",5:"22.40",6:"26.60",7:"30.70",8:"34.80",9:"38.70",10:"42.60",
+      "-1":"-5.10","-2":"-10.20","-3":"-15.40","-4":"-20.50","-5":"-25.60","-6":"-30.70","-7":"-35.80","-8":"-41.00","-9":"-46.10","-10":"-51.20"
+    },
+    9000: {
+      1:"5.51",2:"10.99",3:"16.45",4:"21.88",5:"27.30",6:"32.70",7:"38.07",8:"43.42",9:"48.76",10:"54.07",
+      "-1":"-5.54","-2":"-11.11","-3":"-16.71","-4":"-22.34","-5":"-27.99","-6":"-33.67","-7":"-39.68","-8":"-45.12","-9":"-50.87","-10":"-56.66"
+    },
+    10000: {
+      1:"6.00",2:"11.90",3:"17.70",4:"23.40",5:"28.90",6:"34.40",7:"39.70",8:"44.90",9:"50.00",10:"55.10",
+      "-1":"-6.60","-2":"-13.20","-3":"-19.80","-4":"-26.50","-5":"-33.10","-6":"-39.70","-7":"-46.30","-8":"-52.90","-9":"-59.50","-10":"-66.10"
+    },
+    12000: {
+      1:"7.20",2:"14.30",3:"21.20",4:"28.00",5:"34.70",6:"41.20",7:"47.60",8:"53.90",9:"60.10",10:"66.10",
+      "-1":"-7.90","-2":"-15.90","-3":"-23.80","-4":"-31.70","-5":"-39.70","-6":"-47.60","-7":"-55.50","-8":"-63.50","-9":"-71.40","-10":"-79.40"
+    }
+  };
+
+  function processValues() {
+    const a = parseFloat(inputA.value);
+    const capacity = parseFloat(dropdown.value);
+
+    if (isNaN(a) || isNaN(capacity)) {
+      resultEl.textContent = "❌ กรุณากรอกข้อมูลให้ครบถ้วน";
+      result.style.fontSize = "30px";
+      resultEl.style.color = "#ED2100";
+      resultHidden.value = "";
+      return;
+    }
+
+    const table = tables[capacity];
+    const out = table ? table[String(a)] : null;
+
+    if (!out) {
+      resultEl.textContent = "⚠️ กรุณากรอกข้อมูลให้ถูกต้อง";
+            result.style.fontSize = "30px";
+      resultEl.style.color = "#FFD700";
+      resultHidden.value = "";
+      return;
+    }
+
+    resultEl.textContent = out;
+    resultEl.style.color = out.startsWith('-') ? "#ED2100" : "#00ff99";
+    resultHidden.value = out;
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    processValues();
+    if (!resultHidden.value) {
+      alert("กรุณาแปรค่าให้ได้ผลลัพธ์ก่อนบันทึก");
+      return;
+    }
+    const fd = new FormData(form);
+    fetch(scriptURL, { method: 'POST', body: fd })
+      .then(res => res.text())
+      .then(txt => {
+        alert("✅ บันทึกข้อมูลเรียบร้อยแล้ว");
+        form.reset();
+        resultEl.textContent = "---";
+        resultEl.style.color = "#fff";
+        resultHidden.value = "";
+      })
+      .catch(err => {
+        alert("❌ เกิดข้อผิดพลาด: " + err);
+      });
+  });
+</script>
+</body>
+</html>
